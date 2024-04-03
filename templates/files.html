@@ -1,0 +1,31 @@
+{% extends "index.html" %}
+
+{% block title %}Uploads - PyNas{% endblock %}
+
+{% block content %}
+<h1 class="mt-4">Uploads</h1>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h2>Folders:</h2>
+        <ul class="list-group">
+            {% for folder in folders %}
+                <li class="list-group-item">
+                    <a href="{{ url_for('folder_files', foldername=folder) }}">{{ folder }}</a>
+                    <a href="/delete/{{ folder }}">(Delete)</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <h2>Fast Files:</h2>
+        <ul class="list-group">
+            {% for file in files %}
+                <li class="list-group-item">
+                    <a href="/download/{{ file }}" target="_blank">{{ file }}</a>
+                    <a href="/delete/{{ file }}">(Delete)</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}
