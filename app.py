@@ -1,9 +1,19 @@
-from flask import Flask, request, render_template, send_from_directory, redirect, url_for, flash
+from flask import Flask, request, render_template, send_from_directory, redirect, url_for, flash, session
+from werkzeug.security import check_password_hash, generate_password_hash
 import os
 
 app = Flask(__name__)
 app.config['VERSION'] = 'v1.0'
 app.secret_key = 'super_secret_key :D'
+
+password = 'passwd'
+
+users = {
+    'john': {
+        'password': generate_password_hash(password, method='pbkdf2:sha256', salt_length=8),
+        'email': 'loay@example.com'
+    }
+}
 
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
@@ -13,10 +23,56 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def index():
+    if 'username' not in session:
+        return redirect('/login')
+
     return render_template('index.html')
+
+# TODO: FIXME
+# @app.before_request
+# def check_authentication():
+#     if request.endpoint != 'login' and 'username' not in session:
+#         return redirect(url_for('login'))
+        
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username in users and check_password_hash(users[username]['password'], password):
+            session['username'] = username
+            flash('Login successful!', 'success')
+            return redirect('/')
+        else:
+            flash('Invalid username or password', 'error')
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if username in users:
+            flash('Username already exists', 'error')
+        else:
+            hashed_password = generate_password_hash(password)
+            users[username] = {'password': hashed_password}
+            flash('Registration successful. Please log in.', 'success')
+            return redirect('/login')
+    return render_template('register.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    flash('You have been logged out', 'info')
+    return redirect('/login')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    if 'username' not in session:
+        return redirect(url_for('login'))
     folder = request.form['folder']
     if folder:
         folder_path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
@@ -39,6 +95,8 @@ def upload_file():
 
 @app.route('/files')
 def list_files():
+    if 'username' not in session:
+        return redirect(url_for('login'))
     folders = []
     files = []
     for item in os.listdir(app.config['UPLOAD_FOLDER']):
@@ -50,10 +108,14 @@ def list_files():
 
 @app.route('/download/<path:filename>')
 def download_file(filename):
+    if 'username' not in session:
+        return redirect(url_for('login'))
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
 @app.route('/delete/<path:filename>')
 def delete_file(filename):
+    if 'username' not in session:
+        return redirect(url_for('login'))
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if os.path.exists(file_path):
         if os.path.isdir(file_path):
@@ -72,6 +134,8 @@ def delete_file(filename):
 
 @app.route('/folder/<foldername>')
 def folder_files(foldername):
+    if 'username' not in session:
+        return redirect(url_for('login'))
     folder_path = os.path.join(app.config['UPLOAD_FOLDER'], foldername)
     files = os.listdir(folder_path)
     return render_template('folder.html', foldername=foldername, files=files)
