@@ -6,6 +6,10 @@ app = Flask(__name__)
 app.config['VERSION'] = 'v1.0'
 app.secret_key = 'super_secret_key :D'
 
+def checkAuth():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
 password = 'passwd'
 
 users = {
@@ -71,8 +75,7 @@ def logout():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'username' not in session:
-        return redirect(url_for('login'))
+    checkAuth()
     folder = request.form['folder']
     if folder:
         folder_path = os.path.join(app.config['UPLOAD_FOLDER'], folder)
@@ -95,8 +98,7 @@ def upload_file():
 
 @app.route('/files')
 def list_files():
-    if 'username' not in session:
-        return redirect(url_for('login'))
+    checkAuth()
     folders = []
     files = []
     for item in os.listdir(app.config['UPLOAD_FOLDER']):
@@ -108,14 +110,12 @@ def list_files():
 
 @app.route('/download/<path:filename>')
 def download_file(filename):
-    if 'username' not in session:
-        return redirect(url_for('login'))
+    checkAuth()
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename, as_attachment=True)
 
 @app.route('/delete/<path:filename>')
 def delete_file(filename):
-    if 'username' not in session:
-        return redirect(url_for('login'))
+    checkAuth()
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if os.path.exists(file_path):
         if os.path.isdir(file_path):
@@ -134,11 +134,11 @@ def delete_file(filename):
 
 @app.route('/folder/<foldername>')
 def folder_files(foldername):
-    if 'username' not in session:
-        return redirect(url_for('login'))
+    checkAuth()
     folder_path = os.path.join(app.config['UPLOAD_FOLDER'], foldername)
     files = os.listdir(folder_path)
     return render_template('folder.html', foldername=foldername, files=files)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
