@@ -1,29 +1,38 @@
 from flask import Flask, request, render_template, send_from_directory, redirect, url_for, flash, session
+from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
 import os
 
 app = Flask(__name__)
 app.config['VERSION'] = 'v1.0'
 app.secret_key = 'super_secret_key :D'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+
+    def __repr__(self):
+        return f"User('{self.username}')"
 
 def checkAuth():
     if 'username' not in session:
         return redirect(url_for('login'))
-
-password = 'passwd'
-
-users = {
-    'john': {
-        'password': generate_password_hash(password, method='pbkdf2:sha256', salt_length=8),
-        'email': 'loay@example.com'
-    }
-}
 
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# TODO: FIXME
+# @app.before_request
+# def check_authentication():
+#     if request.endpoint != 'login' and 'username' not in session:
+#         return redirect(url_for('login'))
 
 @app.route('/')
 def index():
@@ -32,20 +41,14 @@ def index():
 
     return render_template('index.html')
 
-# TODO: FIXME
-# @app.before_request
-# def check_authentication():
-#     if request.endpoint != 'login' and 'username' not in session:
-#         return redirect(url_for('login'))
-        
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in users and check_password_hash(users[username]['password'], password):
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password, password):
             session['username'] = username
             flash('Login successful!', 'success')
             return redirect('/')
@@ -58,11 +61,17 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in users:
+        if User.query.filter_by(username=username).first():
             flash('Username already exists', 'error')
         else:
+            # Generate password hash
             hashed_password = generate_password_hash(password)
-            users[username] = {'password': hashed_password}
+            # Create a new user instance
+            new_user = User(username=username, password=hashed_password)
+            # Add the new user to the database session
+            db.session.add(new_user)
+            # Commit the changes to the database
+            db.session.commit()
             flash('Registration successful. Please log in.', 'success')
             return redirect('/login')
     return render_template('register.html')
@@ -141,4 +150,6 @@ def folder_files(foldername):
 
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)
