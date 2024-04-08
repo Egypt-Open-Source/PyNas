@@ -1,6 +1,6 @@
-# PyNAS v1.0
+# PyNAS v1.5.1
 
-PyNAS is a simple Network Attached Storage (NAS) server built with Python and Flask. It allows users to upload, organize, download, and delete files and folders through a web interface.
+<b>PyNAS</b> is a simple Network Attached Storage (NAS) server built with Python and Flask. It allows users to upload, organize, download, and delete files and folders through a web interface.
 
 ## Screen Shoots
 ![login](https://github.com/Egypt-Open-Source/PyNas/assets/72279810/989f5eab-f03e-489b-a171-a46efd316692)
